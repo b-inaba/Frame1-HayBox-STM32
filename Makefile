@@ -2,7 +2,7 @@
 CC = arm-none-eabi-gcc
 OBJCOPY = arm-none-eabi-objcopy
 SIZE = arm-none-eabi-size
-CFLAGS = -mcpu=cortex-m4 -mthumb -mfloat-abi=soft -Os -std=gnu11 -ffreestanding -fdata-sections -ffunction-sections -Wall -Wextra -Werror
+CFLAGS = -mcpu=cortex-m4 -mthumb -mfpu=fpv4-sp-d16 -mfloat-abi=hard -Os -std=gnu11 -ffreestanding -fdata-sections -ffunction-sections -Wall -Wextra -Werror
 LDFLAGS = -TSTM32F303VE_app.ld -nostdlib -Wl,--gc-sections
 
 all: build/frame1-app.bin check
