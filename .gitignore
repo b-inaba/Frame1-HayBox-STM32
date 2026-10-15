@@ -1,0 +1,7 @@
+# Keep proprietary controller firmware and personal readbacks private.
+frame1-backup.bin
+*.dfu
+local-dfu-plans/
+__pycache__/
+build/
+external/
