@@ -1,34 +1,39 @@
-# Frame1 STM32F303 HayBox port — bring-up skeleton
+# Frame1-HayBox-STM32
 
-**Research build only. NOT READY TO FLASH.** This is a minimal linker/startup project, not HayBox yet.
+An experimental zero-cost effort to bring open-source, tournament-nerfed Melee controller firmware to **original retail Frame1 hardware**.
 
-## Hardware discoveries from the supplied 512 KiB flash dump
+**WARNING: NO BUILDS IN THIS REPOSITORY ARE APPROVED FOR FLASHING.** These are development experiments. Do not use the generated binaries on your Frame1 yet.
 
-- MCU as identified in photo: STM32F303VET6 (confirm top marking as necessary)
-- DFU USB interface: VID 0483, PID DF11
-- Vector table of bootloader at `0x08000000`
-- Application vector table at `0x08020000`
-- All bytes at `0x08010000...0x0801ffff` are `0xff`
-- Bootloader code extends beyond `0x08008000`
-- Physical flash: 2 KiB pages per ST RM0316
-- DFU-reported memory descriptor instead describes F4-style **16/64/128 KiB sectors**
-- **Crucial:** firmware DFU bootloader lives in writable user flash, so `mass-erase`, `unprotect`, or an incorrect erase range may destroy it. Backup alone does not guarantee USB recovery.
+## Verified from a local user's controller and readback
 
-## Build with GitHub Actions
+- STM32F303VE microcontroller (512 KiB flash; 80 KiB total SRAM)
+- `0483:DF11` USB DFU enumerates when holding Up during USB connect
+- User-flash bootloader at `0x08000000`, controller app at `0x08020000`.
+- 2 KiB actual flash pages, despite DFU reporting mismatched sector layout.
+- Static analysis found 2 KiB incremental page erases in the bootloader; see [bootloader research](docs/bootloader-analysis.md).
+- Bootloader must be protected; losing it could disable Up-button USB recovery.
 
-This repository's **Build STM32F303 application** workflow compiles and checks the linker layout without accessing any hardware. On a Linux host with `arm-none-eabi-gcc`, run `make`.
+## Builds
 
-The linked app has a vector table at `0x08020000`. The implementation currently just loops. There is no observable behavior, so **do not flash this build**.
+`make` builds the simple original skeleton only.
 
-## Next tasks
+`make usb-probe` builds a **separate, untested** USB device-enumeration probe using LGPL-licensed [libopencm3](https://github.com/libopencm3/libopencm3). GitHub Actions fetches and builds pinned libopencm3 automatically. The USB probe aims to appear as a distinct vendor-specific USB device, not a GameCube adapter or HID.
 
-1. Read/disassemble the bootloader's flash-erasing function to determine actual erase behavior versus advertised DFU sectors. Test this off-device.
-2. Document DFU boot-entry condition (hardware Up at boot vs bootloader GPIO logic); continue to preserve `0x08000000...0x0801ffff`.
-3. Add STM32F3 USB driver and an identifiable CDC/HID test, *then* decide on a cautious first write.
-4. Map button GPIOs and port HayBox logic, followed by GameCube Joybus output.
+Builds link to `0x08020000`. Actions compiles and validates binaries and publishes the results, but **does not flash any hardware**.
 
-## Do not
+To build the probe locally, install arm-none-eabi-gcc and newlib, then:
+```sh
+git clone https://github.com/libopencm3/libopencm3.git external/libopencm3
+git -C external/libopencm3 checkout ddcbb2889fa018626c604e27ea50e66db5755b78
+make -C external/libopencm3 TARGETS=stm32/f3
+make usb-probe
+```
 
-Do not use `dfu-util -D`, `:mass-erase`, `:unprotect`, `:force`, or change option bytes on the current board until the bootloader behavior is validated.
+## Unknowns before a first write
 
-**Do not commit private dumps or the original proprietary Frame1 firmware into this public repository.**
+1. Whether a host-side DFU write properly erases **every 2 KiB page**, despite the descriptor mismatch.
+2. Whether Up-button recovery is guaranteed to work with a broken/absent app.
+3. Whether USB crystal and pull-up assumptions of the probe match actual Frame1 PCB.
+4. How all buttons are wired; how to implement Joybus output and port tournament-nerfed HayBox logic.
+
+Never commit the original closed-source Frame1 firmware dump or serial identifiers to this public repo. Any eventual uploader must explicitly protect `0x08000000..0x0801FFFF`, reject mass erase, and verify a post-write readback.

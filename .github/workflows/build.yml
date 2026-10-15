@@ -1,4 +1,4 @@
-name: Build STM32F303 application (no flashing)
+name: Build STM32F303 applications (NO FLASH)
 
 on:
   push:
@@ -11,14 +11,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install Arm GCC toolchain
-        run: sudo apt-get update && sudo apt-get install -y gcc-arm-none-eabi binutils-arm-none-eabi
+        run: sudo apt-get update && sudo apt-get install -y gcc-arm-none-eabi binutils-arm-none-eabi libnewlib-arm-none-eabi
       - name: Compile and check application layout
         run: make
-      - name: Publish build artifact
+      - name: Obtain pinned libopencm3 source
+        run: |
+          git clone --quiet https://github.com/libopencm3/libopencm3.git external/libopencm3
+          git -C external/libopencm3 checkout --quiet ddcbb2889fa018626c604e27ea50e66db5755b78
+          make -C external/libopencm3 -j2 TARGETS=stm32/f3
+      - name: Compile USB enumeration probe (not flashed)
+        run: make usb-probe
+      - name: Publish build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: frame1-stm32-bringup-not-for-flashing
+          name: frame1-stm32-experimental-NOT-FOR-FLASHING
           path: |
-            build/frame1.elf
-            build/frame1-app.bin
-            build/frame1.map
+            build/*.elf
+            build/*.bin
+            build/*.map
