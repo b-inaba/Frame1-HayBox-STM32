@@ -60,3 +60,35 @@ py -3 scripts\read_only_preflight.py --backup "C:\path\to\frame1-backup.bin" --d
 
 A passing result proves the original flash is unchanged; it does **not**
 prove a future write will be safe. Do not upload or commit your private backup.
+
+
+## Canary page experiment (preparation ONLY)
+
+The user has confirmed a complete, byte-for-byte read-only DFU preflight
+against the original 512 KiB backup.
+
+Our proposed *first write* would be a 2048-byte canary in a **blank page at
+0x08060800**, far above both the bootloader and original application.
+This is **NOT YET AUTHORIZED OR TESTED ON HARDWARE** and could still brick
+the board if the bootloader misinterprets the erase/write requests.
+
+Create the canary **offline**, using the original backup, with:
+
+\`\`\`cmd
+py -3 scripts\canary_test.py prepare --backup "C:\path\to\frame1-backup.bin" --out canary-output
+\`\`\`
+
+The script writes only local files: \`canary.bin\`, a manifest and warning
+instructions. It contains no flashing capability. It refuses the operation
+unless that physical page is \`0xFF\` in the original backup.
+
+After a separately approved canary write and 512 KiB hardware readback,
+the script can verify that **only** the exact target page changed:
+
+\`\`\`cmd
+py -3 scripts\canary_test.py verify --backup "C:\path\to\frame1-backup.bin" --readback "C:\path\to\full-readback.bin" --canary canary-output\canary.bin
+\`\`\`
+
+Any changes elsewhere, including the bootloader, produce a STOP error.
+Do not start an actual write without reviewing the per-page DFU protocol
+and accepting that failure may require external SWD hardware to recover.
