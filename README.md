@@ -11,6 +11,7 @@ An experimental zero-cost effort to bring open-source, tournament-nerfed Melee c
 - User-flash bootloader at `0x08000000`, controller app at `0x08020000`.
 - 2 KiB actual flash pages, despite DFU reporting mismatched sector layout.
 - Static analysis found 2 KiB incremental page erases in the bootloader; see [bootloader research](docs/bootloader-analysis.md).
+- The original bootloader checks GPIO button states and the app vector before `BLX` handoff, independently of the app; see [boot sequence analysis](docs/bootpath-analysis.md).
 - Bootloader must be protected; losing it could disable Up-button USB recovery.
 
 ## Builds
@@ -18,6 +19,8 @@ An experimental zero-cost effort to bring open-source, tournament-nerfed Melee c
 `make` builds the simple original skeleton only.
 
 `make usb-probe` builds a **separate, untested** USB device-enumeration probe using LGPL-licensed [libopencm3](https://github.com/libopencm3/libopencm3). GitHub Actions fetches and builds pinned libopencm3 automatically. The USB probe aims to appear as a distinct vendor-specific USB device, not a GameCube adapter or HID.
+
+The USB probe now handles bootloader-to-app clock handoff (HSI before reconfiguring PLL) and sanitizes leftover interrupt state. These are static mitigations, not proof of working hardware.
 
 Builds link to `0x08020000`. Actions compiles and validates binaries and publishes the results, but **does not flash any hardware**.
 
@@ -32,8 +35,10 @@ make usb-probe
 ## Unknowns before a first write
 
 1. Whether a host-side DFU write properly erases **every 2 KiB page**, despite the descriptor mismatch.
-2. Whether Up-button recovery is guaranteed to work with a broken/absent app.
+2. Bootloader-owned Up/GPIO selection appears independent of the app, but recovery after an invalid reset handler is not yet hardware-verified.
 3. Whether USB crystal and pull-up assumptions of the probe match actual Frame1 PCB.
 4. How all buttons are wired; how to implement Joybus output and port tournament-nerfed HayBox logic.
+
+After a future experimental flash, compare the entire 512 KiB readback with the original backup and page-plan manifest using `scripts/verify_readback.py`. This is **read only** and not a substitute for proving USB recovery.
 
 Never commit the original closed-source Frame1 firmware dump or serial identifiers to this public repo. Any eventual uploader must explicitly protect `0x08000000..0x0801FFFF`, reject mass erase, and verify a post-write readback.

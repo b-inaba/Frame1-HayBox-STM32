@@ -57,8 +57,16 @@ static uint8_t control_buffer[128];
 int main(void) {
     /* Assumed 8-MHz HSE -> 72-MHz CPU / 48-MHz USB via PLL / 1.5.
        Must verify crystal and actual USB wiring before flashing! */
+    /* Important: the Frame1 user-flash bootloader BLX-jumps to our app
+       without resetting RCC. Its PLL may already be SYSCLK. libopencm3's
+       clock_setup_pll turns PLL off, so first switch SYSCLK back to HSI. */
+    rcc_osc_on(RCC_HSI);
+    rcc_wait_for_osc_ready(RCC_HSI);
+    rcc_set_sysclk_source(RCC_CFGR_SW_HSI);
+    rcc_wait_for_sysclk_status(RCC_HSI);
     rcc_clock_setup_pll(&rcc_hse8mhz_configs[0]);
     rcc_periph_clock_enable(RCC_USB);
+    rcc_periph_reset_pulse(RST_USB);
     /* On F303xD/E, USB D+/D- connect directly when USB peripheral is enabled:
        do NOT configure PA11/PA12 as an alternate function. (ST AN4807) */
 
