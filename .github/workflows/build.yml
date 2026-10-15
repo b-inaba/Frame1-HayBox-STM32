@@ -1,0 +1,24 @@
+name: Build STM32F303 application (no flashing)
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  firmware:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Arm GCC toolchain
+        run: sudo apt-get update && sudo apt-get install -y gcc-arm-none-eabi binutils-arm-none-eabi
+      - name: Compile and check application layout
+        run: make
+      - name: Publish build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: frame1-stm32-bringup-not-for-flashing
+          path: |
+            build/frame1.elf
+            build/frame1-app.bin
+            build/frame1.map
