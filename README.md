@@ -42,3 +42,21 @@ make usb-probe
 After a future experimental flash, compare the entire 512 KiB readback with the original backup and page-plan manifest using `scripts/verify_readback.py`. This is **read only** and not a substitute for proving USB recovery.
 
 Never commit the original closed-source Frame1 firmware dump or serial identifiers to this public repo. Any eventual uploader must explicitly protect `0x08000000..0x0801FFFF`, reject mass erase, and verify a post-write readback.
+
+
+## Read-only DFU preflight (zero write operations)
+
+The optional script \`scripts/read_only_preflight.py\` identifies exactly one
+Frame1 USB DFU device, reads its entire 512 KiB flash using dfu-util \`-U\`,
+and compares it byte-for-byte against your *private* original backup.
+It contains no \`-D\` programming command.
+
+On Windows, open a Command Prompt in the repository directory,
+hold **Up** while connecting the Frame1, then run (adjust both paths):
+
+\`\`\`cmd
+py -3 scripts\read_only_preflight.py --backup "C:\path\to\frame1-backup.bin" --dfu-util "C:\path\to\dfu-util.exe"
+\`\`\`
+
+A passing result proves the original flash is unchanged; it does **not**
+prove a future write will be safe. Do not upload or commit your private backup.
